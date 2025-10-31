@@ -11,7 +11,7 @@ model.fc = th.nn.Sequential(
 )
 device = th.device("cuda" if th.cuda.is_available() else "cpu")
 
-model.load_state_dict(th.load("pathmnist_classifier.pt", map_location="cpu"))
+model.load_state_dict(th.load("classifier.pt", map_location="cpu"))
 model.to(device)
 
 dataset = th.load("natural_images.pt")
