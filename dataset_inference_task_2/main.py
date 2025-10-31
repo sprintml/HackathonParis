@@ -16,9 +16,11 @@ model.load_state_dict(th.load("classifier.pt", map_location="cpu"))
 model.to(device)
 
 # Load the dataset
+
 dataset = th.load("subsets_dataset.pt")
 
 # Example: How to access a subset
+
 subset_0 = dataset["subset_0"]
 print(subset_0)
 subset_999 = dataset["subset_999"]
@@ -29,6 +31,7 @@ images = [img.flatten().tolist() for img in subset_0["images"]]
 TOKEN = "REPLACE-WITH-YOUR-TOKEN"
 
 # Sample submission
+
 df = pd.DataFrame(
     {
         "ids": list(range(len(dataset))),
@@ -37,5 +40,5 @@ df = pd.DataFrame(
 )
 df.to_csv("test.csv", index=None)
 
-response = requests.post("http://34.122.51.94:9090/06-dataset-inference-vision", files={"file": open("test.csv", "rb")}, headers={"token": TOKEN})
+response = requests.post("http://34.122.51.94:9000/06-dataset-inference-vision", files={"file": open("test.csv", "rb")}, headers={"token": TOKEN})
 print(response.json())

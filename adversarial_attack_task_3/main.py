@@ -35,11 +35,13 @@ def pt_to_npz(base_data, part_data, npz_path):
     np.savez_compressed(npz_path, perturbations=perturbations, allow_pickle=False)
 
 # Generate a pt file with random images and labels
+
 random_labels = th.randint(0, 9, (len(dataset['images']), 1))
 random_images = dataset['images'] + th.randn_like(dataset['images']) * 0.1
 random_pt = {'images': random_images}
 
 # Convert this to an npz file
+
 pt_to_npz(dataset, random_pt, npz_path="perturbations.npz")
 
 
