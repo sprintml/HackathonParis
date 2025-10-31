@@ -46,7 +46,7 @@ while True:
 
         print(f"Submission Status: {status}")
 
-        if status in ["completed", "failed"]:
+        if status in ["done", "failed"]:
             print("Final submission data:", status_data)
             break
 
