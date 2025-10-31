@@ -1,5 +1,4 @@
 import torch as th
-import torchvision.models as models
 import numpy as np
 
 #Load the dataset here

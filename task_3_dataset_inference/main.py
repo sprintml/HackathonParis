@@ -1,4 +1,3 @@
-import torchvision.models as models
 import torch as th
 import pandas as pd
 import numpy as np
