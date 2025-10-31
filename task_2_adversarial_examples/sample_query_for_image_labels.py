@@ -1,6 +1,8 @@
 import numpy as np
 import requests
 
+# This Code can be used to query the model during adversarial example generation
+
 BASE_URL = "http://34.122.51.94:9000"
 
 # Query the model for logits

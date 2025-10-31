@@ -5,6 +5,8 @@ import numpy as np
 
 dataset = th.load("natural_images.pt")
 
+# You can use the Code from sample_query_for_image_labels.py to query the model and get the logits for the images in the dataset
+
 # Example of conversion from pt containing adversarial examples to npz file containing perturbations
 
 def pt_to_npz(base_data, part_data, npz_path):
