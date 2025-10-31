@@ -14,7 +14,7 @@ device = th.device("cuda" if th.cuda.is_available() else "cpu")
 model.load_state_dict(th.load("classifier.pt", map_location="cpu"))
 model.to(device)
 
-dataset = th.load("/sprint2/adam/natural_images.pt")x
+dataset = th.load("/sprint2/adam/natural_images.pt")
 
 # Example of conversion from pt containing adversarial examples to npz file containing perturbations
 
