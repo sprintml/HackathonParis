@@ -11,10 +11,10 @@ model.fc = th.nn.Sequential(
 )
 device = th.device("cuda" if th.cuda.is_available() else "cpu")
 
-model.load_state_dict(th.load("pathmnist_classifier.pt", map_location="cpu"))
+model.load_state_dict(th.load("classifier.pt", map_location="cpu"))
 model.to(device)
 
-dataset = th.load("natural_images.pt")
+dataset = th.load("/sprint2/adam/natural_images.pt")x
 
 # Example of conversion from pt containing adversarial examples to npz file containing perturbations
 
@@ -45,7 +45,7 @@ random_pt = {'images': random_images}
 pt_to_npz(dataset, random_pt, npz_path="perturbations.npz")
 
 
-TOKEN = "REPLACE-WITH-YOUR-TOKEN"
+TOKEN = "efd51e3ccdb1fc0088748f5735a263b8"
 
 th.save({'images': dataset["images"], 'labels': dataset["labels"]}, "test.pt")
 
