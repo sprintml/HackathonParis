@@ -5,10 +5,10 @@ import numpy as np
 
 
 BASE_URL = "http://34.122.51.94:9000"
-API_KEY  = "YOUR_API_KEY" 
+API_KEY  = "8276646c5099be2dac0441cf9ca05c48" 
 
 TASK_ID  = "10-adversarial-examples"
-FILE_PATH = "PATH/TO/YOUR/SUBMISSION_FILE.npz"
+FILE_PATH = "sample_submission.npz"
 
 # Submit the solutions
 try:
