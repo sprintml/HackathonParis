@@ -1,7 +1,5 @@
-import os
 import requests
 import time
-import json
 import sys
 import numpy as np
 
