@@ -32,54 +32,15 @@ print(subset_999["labels"][:5])  # Print first 5 labels of subset 999
 # QUERYING THE CLASSIFIER
 # --------------------------------
 
-# You can use the following Code to query the image classifier with images, and get back the corresponding logits:
+# You can use the following Code to query the image classifier with images:
 
-BASE_URL = "http://34.122.51.94:9000"
+model = th.load("classifier.pt", map_location="cpu")
 
-url = f"{BASE_URL}/06-dataset-inference-vision/logits"
+images = subset_0["images"]
 
-N = 100  # Number of sample images to query
+output = model(images)
 
-# Generate sample images
-images = th.randint(0, 256, size=(N, 1, 28, 28), dtype=th.uint8) # <- Insert your input images here
-# Normalize to [0, 1] range
-images = images.float() / 255.0
-
-# Generate sequential image IDs
-image_ids = th.arange(N, dtype=th.int32)
-
-# Save both images and their IDs
-output_path = "./query_images.pt"
-th.save({
-    "images": images,
-    "image_ids": image_ids
-}, output_path)
-
-# Query the model
-with open(output_path, "rb") as f:
-    response = requests.post(
-        url,
-        files={"pt": f},
-        timeout=60,
-    )
-
-if response.status_code == 200:
-    data = response.json()
-    print("✅ Request successful")
-    print(f"Batch size: {data['batch_size']}")
-    print(f"Num classes: {data['num_classes']}")
-    print("\nSample of results:")
-    # Print first few results to show the structure
-    for result in data['results'][:5]:  # Show first 5 results
-        print(f"Image ID: {result['image_id']}")
-        print(f"Logits: {result['logits']}\n")
-else:
-    print("❌ Request failed")
-    print("Status code:", response.status_code)
-    try:
-        print("Error message:", response.json())
-    except:
-        print("Error message:", response.text)
+print("Output shape:", output.shape)
 
 # --------------------------------
 # SUBMISSION FORMAT
