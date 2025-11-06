@@ -11,11 +11,17 @@ import sys
 Dataset contents:
 
 -"images": Tensor containing the 1,000 natural images, has shape (1000, 3, 28, 28)
--"labels": Tensor of true labels for the images, has shape (1000, 1)
+-"labels": Tensor of true labels for the images, has shape (1000)
 """
 
 # Load the dataset
 dataset = th.load("natural_images.pt")
+
+print("Dataset keys:", dataset.keys())
+print("Images shape:", dataset["images"].shape)
+print("Labels shape:", dataset["labels"].shape)
+print("First 10 labels:", dataset["labels"][:10])
+print("First image tensor:", dataset["images"][:1])
 
 # --------------------------------
 # QUERYING THE CLASSIFIER
@@ -31,8 +37,7 @@ N = 100  # Number of sample images to query
 
 # Generate sample images
 images = th.randint(0, 256, size=(N, 3, 28, 28), dtype=th.uint8) # <- Insert your input images here
-# Normalize to [0, 1] range
-images = images.float() / 255.0
+images = images.float() / 255.0 # Normalize to [0, 1] range (if they are not already)
 
 # Generate sequential image IDs
 image_ids = th.arange(N, dtype=th.int32)
@@ -85,6 +90,9 @@ The submission must be a .pt file of the following format:
 # Example Submission:
 
 adversarial_examples = th.randint(0, 256, size=(1000, 3, 28, 28), dtype=th.uint8)
+
+adversarial_examples = adversarial_examples.float() / 255.0  # Normalize to [0, 1] range
+
 th.save({'images': adversarial_examples}, "example_submission.pt")
 
 # --------------------------------

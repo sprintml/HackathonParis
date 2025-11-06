@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import time
 import sys
+import torchvision.models as models
 
 # --------------------------------
 # DATASET
@@ -14,7 +15,7 @@ Dataset contents:
 - 1000 subsets of images, each subset stored under the key "subset_{i}" where i ranges from 0 to 999.
   Each subset is a dictionary with:
     -"images": Tensor containing the 100 images in the subset, has shape (100, 1, 28, 28)
-    -"labels": Tensor of true labels for the images in the subset, has shape (100, 1)
+    -"labels": Tensor of true labels for the images in the subset, has shape (100)
     -"subset_id": Integer ID of the subset (from 0 to 999)
 """
 
@@ -23,24 +24,37 @@ dataset = th.load("subsets_dataset.pt")
 
 # Example: Acessing subsets
 subset_0 = dataset["subset_0"]
-print(subset_0["labels"][:5])  # Print first 5 labels of subset 0
 
-subset_999 = dataset["subset_999"]
-print(subset_999["labels"][:5])  # Print first 5 labels of subset 999
+print("Subset 0 keys:", subset_0.keys())
+print("Subset ID:", subset_0["subset_id"])
+print("Images shape:", subset_0["images"].shape)
+print("Labels shape:", subset_0["labels"].shape) 
+print("First image tensor:", subset_0["images"][:1])
+print("First 10 labels:", subset_0["labels"][:10])
 
 # --------------------------------
 # QUERYING THE CLASSIFIER
 # --------------------------------
 
-# You can use the following Code to query the image classifier with images:
+# You can use the following Code to load and query the image classifier with images:
 
-model = th.load("classifier.pt", map_location="cpu")
+model = models.resnet18(weights=None)
+model.conv1 = th.nn.Conv2d(3, 64, kernel_size=5, stride=1, padding=3, bias=False)
+model.fc = th.nn.Sequential(
+    th.nn.Dropout(p=0.2),
+    th.nn.Linear(model.fc.in_features, 9)
+)
+device = th.device("cuda" if th.cuda.is_available() else "cpu")
+
+model.load_state_dict(th.load("classifier.pt", map_location="cpu"))
+model.to(device)
 
 images = subset_0["images"]
 
 output = model(images)
 
-print("Output shape:", output.shape)
+print("Logits shape:", output.shape)  # Should be (100, 9) for subset of 100 images and 9 classes
+print("First 5 logits:", output[:5]) 
 
 # --------------------------------
 # SUBMISSION FORMAT
@@ -55,8 +69,8 @@ The submission must be a .csv file with the following format:
 
 # Example Submission:
 
-subset_ids = list(range(len(dataset['images'])))
-membership_scores = th.rand(len(dataset['images'])).tolist()
+subset_ids = list(range(len(dataset)))  
+membership_scores = th.rand(len(dataset)).tolist()
 submission_df = pd.DataFrame({
     "subset_id": subset_ids,
     "membership": membership_scores
@@ -67,6 +81,7 @@ submission_df.to_csv("example_submission.csv", index=None)
 # SUBMISSION PROCESS
 # --------------------------------
 
+BASE_URL = "http://34.122.51.94:9000"
 API_KEY  = "INSERT_YOUR_API_KEY_HERE" 
 
 TASK_ID  = "06-dataset-inference-vision"
