@@ -103,7 +103,12 @@ API_KEY  = "YOUR_API_KEY_HERE"
 
 TASK_ID = "10-adversarial-examples"
 
+# Path to the .npz file containing the images you want to get logits for
+
+QUERY_PATH = "PATH/TO/YOUR/QUERY_FILE.npz"
+
 # Path to the .npz file you want to send
+
 FILE_PATH = "PATH/TO/YOUR/SUBMISSION.npz"
 
 GET_LOGITS = False      # set True to get logits from the API
@@ -118,8 +123,8 @@ def die(msg):
 
 if GET_LOGITS:
 
-    with open(FILE_PATH, "rb") as f:
-        files = {"npz": (FILE_PATH, f, "application/octet-stream")}
+    with open(QUERY_PATH, "rb") as f:
+        files = {"npz": (QUERY_PATH, f, "application/octet-stream")}
         response = requests.post(
             f"{BASE_URL}/{TASK_ID}/logits", 
             files=files)
