@@ -1,4 +1,4 @@
-import torch as th
+import torch
 import pandas as pd
 import requests
 import sys
@@ -20,7 +20,7 @@ Dataset contents:
 """
 
 # Load the dataset
-dataset = th.load("subsets_dataset.pt")
+dataset = torch.load("subsets_dataset.pt")
 
 # Example: Acessing subsets
 subset_0 = dataset["subset_0"]
@@ -39,14 +39,14 @@ print("First 10 labels:", subset_0["labels"][:10])
 # You can use the following Code to load and query the image classifier with images:
 
 model = models.resnet18(weights=None)
-model.conv1 = th.nn.Conv2d(3, 64, kernel_size=5, stride=1, padding=3, bias=False)
-model.fc = th.nn.Sequential(
-    th.nn.Dropout(p=0.2),
-    th.nn.Linear(model.fc.in_features, 9)
+model.conv1 = torch.nn.Conv2d(3, 64, kernel_size=5, stride=1, padding=3, bias=False)
+model.fc = torch.nn.Sequential(
+    torch.nn.Dropout(p=0.2),
+    torch.nn.Linear(model.fc.in_features, 9)
 )
-device = th.device("cuda" if th.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model.load_state_dict(th.load("classifier.pt", map_location="cpu"))
+model.load_state_dict(torch.load("classifier.pt", map_location="cpu"))
 model.to(device)
 
 images = subset_0["images"]
@@ -70,7 +70,7 @@ The submission must be a .csv file with the following format:
 # Example Submission:
 
 subset_ids = list(range(len(dataset)))  
-membership_scores = th.rand(len(dataset)).tolist()
+membership_scores = torch.rand(len(dataset)).tolist()
 submission_df = pd.DataFrame({
     "subset_id": subset_ids,
     "membership": membership_scores

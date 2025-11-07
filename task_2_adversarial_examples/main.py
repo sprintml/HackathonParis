@@ -1,4 +1,4 @@
-import torch as th
+import torch
 import requests
 import sys
 import os
@@ -16,7 +16,7 @@ Dataset contents:
 """
 
 # Load the dataset
-dataset = th.load("natural_images.pt")
+dataset = torch.load("natural_images.pt")
 
 print("Dataset keys:", dataset.keys())
 print("Images shape:", dataset["images"].shape)
@@ -37,7 +37,7 @@ The submission must be a .npz file of the following format:
 
 # Example Submission:
 
-adversarial_examples = th.randint(0, 256, size=(1000, 3, 28, 28), dtype=th.uint8)
+adversarial_examples = torch.randint(0, 256, size=(1000, 3, 28, 28), dtype=torch.uint8)
 
 adversarial_examples = adversarial_examples.float() / 255.0  # normalize to [0, 1] range
 
