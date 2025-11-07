@@ -11,16 +11,19 @@ import numpy as np
 """
 Dataset contents:
 
--"images": Tensor containing the 1,000 natural images, has shape (1000, 3, 28, 28)
--"labels": Tensor of true labels for the images, has shape (1000)
+-"image_ids": List containing the IDs of the 100 natural images, has shape (100)
+-"images": Tensor containing the 100 natural images, has shape (100, 3, 28, 28)
+-"labels": List of true labels for the images, has shape (100)
 """
 
 # Load the dataset
-dataset = torch.load("natural_images.pt")
+dataset = torch.load("natural_images_new.pt", weights_only=False)
 
 print("Dataset keys:", dataset.keys())
+print("Image IDs shape:", dataset["image_ids"].shape)
 print("Images shape:", dataset["images"].shape)
 print("Labels shape:", dataset["labels"].shape)
+print("First 10 image IDs:", dataset["image_ids"][:10])
 print("First 10 labels:", dataset["labels"][:10])
 print("First image tensor:", dataset["images"][:1])
 
@@ -31,19 +34,22 @@ print("First image tensor:", dataset["images"][:1])
 """
 The submission must be a .npz file of the following format:
 
+-"image_ids": List containing the IDs of the images corresponding to your adversarial examples, has shape (100)
 -"images": Tensor containing the generated adversarial examples in the same order as the corresponding
-           natural images, has shape (N, 3, 28, 28)
+           natural images, has shape (100, 3, 28, 28)
 """
 
 # Example Submission:
 
-adversarial_examples = torch.randint(0, 256, size=(1000, 3, 28, 28), dtype=torch.uint8)
+adversarial_examples = torch.randint(0, 256, size=(100, 3, 28, 28), dtype=torch.uint8)
 
 adversarial_examples = adversarial_examples.float() / 255.0  # normalize to [0, 1] range
 
 images_np = adversarial_examples.detach().cpu().numpy()
 
-np.savez_compressed("example_submission.npz", images=images_np)
+image_ids = np.arange(len(images_np))
+
+np.savez_compressed("example_submission.npz", image_ids=image_ids, images=images_np)
 
 # --------------------------------
 # SUBMISSION PROCESS
