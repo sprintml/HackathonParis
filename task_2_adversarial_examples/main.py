@@ -1,7 +1,8 @@
 import torch as th
 import requests
-import time
 import sys
+import os
+import numpy as np
 
 # --------------------------------
 # DATASET
@@ -81,7 +82,7 @@ else:
 # --------------------------------
 
 """
-The submission must be a .pt file of the following format:
+The submission must be a .npz file of the following format:
 
 -"images": Tensor containing the generated adversarial examples in the same order as the corresponding
            natural images, has shape (N, 3, 28, 28)
@@ -91,64 +92,171 @@ The submission must be a .pt file of the following format:
 
 adversarial_examples = th.randint(0, 256, size=(1000, 3, 28, 28), dtype=th.uint8)
 
-adversarial_examples = adversarial_examples.float() / 255.0  # Normalize to [0, 1] range
+adversarial_examples = adversarial_examples.float() / 255.0  # normalize to [0, 1] range
 
-th.save({'images': adversarial_examples}, "example_submission.pt")
+images_np = adversarial_examples.detach().cpu().numpy()
+
+np.savez_compressed("example_submission.npz", images=images_np)
 
 # --------------------------------
 # SUBMISSION PROCESS
 # --------------------------------
 
-# You can submit your adversarial examples using the following code:
+"""
+Adversarial Examples Task — Participant Submission Guide
+========================================================
 
-API_KEY  = "INSERT_YOUR_API_KEY_HERE"
+You will upload a single **.npz** file that contains ONLY an array named **'images'**.
+The evaluator will load your file, run shape/dtype checks against the natural images,
+and then score it by running a fixed classifier and measuring perturbations.
 
-TASK_ID  = "10-adversarial-examples"
-FILE_PATH = "example_submission.pt" # <- Path to your real submission file
+Follow these rules carefully to avoid automatic rejection.
 
-# Submit the solutions
-try:
-    with open(FILE_PATH, "rb") as f:
-        response = requests.post(
-            f"{BASE_URL}/submit/{TASK_ID}",
-            headers={"X-API-Key": API_KEY},
-            files={"file": f},
-            timeout=60,
-        )
+1) File format
+--------------
+- **Extension:** `.npz` (NumPy compressed archive)
+- **Content:** must contain exactly one required key: `'images'`
+- **Max file size:** 200 MB (hard limit). Larger files are rejected.
 
-    response.raise_for_status()
-    submission_data = response.json()
-    submission_id = submission_data.get("submission_id")
+2) Array requirements
+---------------------
+Let `G` be the ground-truth tensor loaded:
 
-    print(f"✅ Successfully submitted. Submission ID: {submission_id}")
-    print("Initial response:", submission_data)
+- **Shape:** `images.shape` must match `G["images"].shape` **exactly**.
+  - If `G["images"]` is `(N, 3, H, W)`, your array must also be `(N, 3, H, W)`.
+  - No extra samples; no fewer; no different dimensions.
+- **Dtype:** `images.dtype` must match `G["images"].dtype` **exactly**.
+  - If the GT uses `float32`, you must submit `float32`.
+  - Safe cast example: `images = np.asarray(images, dtype=np.float32)`
+- **Finite values only:** No NaN or Inf anywhere.
+  - The evaluator checks: `torch.isfinite(images).all()`.
+- **Contiguity:** The server will convert to a contiguous Torch tensor; standard NumPy arrays are fine.
 
-except requests.exceptions.RequestException as e:
-    print(f"❌ An error occurred during submission: {e}")
-    if e.response is not None:
-        print("Response body:", e.response.text)
+
+3) Typical failure messages & what they mean
+--------------------------------------------
+- "File must be .npz and contain an 'images' array."
+  → Wrong extension or missing `'images'` key.
+- "File too large: X bytes (limit 209715200)."
+  → Your file exceeds 200 MB.
+- "Failed to read .npz: ..."
+  → The file is corrupted or not a valid `.npz` created with `allow_pickle=False`.
+- "Failed to convert 'images' to torch tensor: ..."
+  → Your `'images'` array has an unsupported dtype or structure (e.g., object array).
+- "Submitted images must have shape (N, C, H, W), but got (...)."
+  → Shape mismatch with the ground-truth images.
+- "Submitted images must be of type torch.float32, but got torch.float64."
+  → Dtype mismatch with the ground-truth images.
+- "Images must not contain NaN or Inf values."
+  → Clean your array: `np.isfinite(images).all()` must be True.
+"""
+
+API_KEY  = "YOUR_API_KEY_HERE"  
+
+TASK_ID = "10-adversarial-examples"
+
+# Path to the .npz file you want to send
+FILE_PATH = "PATH/TO/YOUR/SUBMISSION.npz"
+
+GET_LOGITS = False      # set True to get logits from the API
+SUBMIT     = False      # set True to submit your solution
+GET_STATUS = False      # set True to poll with a known submission_id
+
+KNOWN_SUBMISSION_ID = "Your_Submission_ID_Here"  # paste a known ID here
+
+def die(msg):
+    print(f"{msg}", file=sys.stderr)
     sys.exit(1)
 
-while True:
+if GET_LOGITS:
+
+    with open(FILE_PATH, "rb") as f:
+        files = {"npz": (FILE_PATH, f, "application/octet-stream")}
+        response = requests.post(
+            f"{BASE_URL}/{TASK_ID}/logits", 
+            files=files)
+
+    if response.status_code == 200:
+        data = response.json()
+        print("Request successful")
+        print(data)
+
+    else:
+        print("Request failed")
+        print("Status code:", response.status_code)
+        print("Detail:", response.text)
+
+if SUBMIT:
+    if not os.path.isfile(FILE_PATH):
+        die(f"File not found: {FILE_PATH}")
+
     try:
-        time.sleep(10)
-        status_response = requests.get(
-            f"{BASE_URL}/submissions/{submission_id}",
-            headers={"X-API-Key": API_KEY},
-        )
-        status_response.raise_for_status()
-        status_data = status_response.json()
-        status = status_data.get("status")
+        with open(FILE_PATH, "rb") as f:
+            files = {
+                "file": (os.path.basename(FILE_PATH), f, "csv"),
+            }
+            resp = requests.post(
+                f"{BASE_URL}/submit/{TASK_ID}",
+                headers={"X-API-Key": API_KEY},
+                files=files,
+                timeout=(10, 120), 
+            )
+        try:
+            body = resp.json()
+        except Exception:
+            body = {"raw_text": resp.text}
 
-        print(f"Submission Status: {status}")
+        if resp.status_code == 413:
+            die("Upload rejected: file too large (HTTP 413). Reduce size and try again.")
 
-        if status in ["done", "failed"]:
-            print("Final submission data:", status_data)
-            break
+        resp.raise_for_status()
+
+        submission_id = body.get("submission_id")
+        print("Successfully submitted.")
+        print("Server response:", body)
+        if submission_id:
+            print(f"Submission ID: {submission_id}")
 
     except requests.exceptions.RequestException as e:
-        print(f"❌ An error occurred while checking submission status: {e}")
-        if e.response is not None:
-            print("Response body:", e.response.text)
+        detail = getattr(e, "response", None)
+        print(f"Submission error: {e}")
+        if detail is not None:
+            try:
+                print("Server response:", detail.json())
+            except Exception:
+                print("Server response (text):", detail.text)
+        sys.exit(1)
+
+if GET_STATUS:
+
+    submission_id = KNOWN_SUBMISSION_ID
+    if not submission_id:
+        die("Please set KNOWN_SUBMISSION_ID to check a submission’s status.")
+
+    try:
+        resp = requests.get(
+            f"{BASE_URL}/submissions/{submission_id}",
+            headers={"X-API-Key": API_KEY},
+            timeout=(10, 30),
+        )
+        try:
+            body = resp.json()
+        except Exception:
+            body = {"raw_text": resp.text}
+
+        resp.raise_for_status()
+
+        status = body.get("status")
+        print(f"Submission Status: {status}")
+        print("Full response:", body)
+
+    except requests.exceptions.RequestException as e:
+        detail = getattr(e, "response", None)
+        print(f"Status check error: {e}")
+        if detail is not None:
+            try:
+                print("Server response:", detail.json())
+            except Exception:
+                print("Server response (text):", detail.text)
         sys.exit(1)
 
