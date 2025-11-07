@@ -98,6 +98,7 @@ Let `G` be the ground-truth tensor loaded:
   → Clean your array: `np.isfinite(images).all()` must be True.
 """
 
+BASE_URL  = "http://34.122.51.94:9000"
 API_KEY  = "YOUR_API_KEY_HERE"  
 
 TASK_ID = "10-adversarial-examples"
