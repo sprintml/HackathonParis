@@ -17,7 +17,7 @@ Dataset contents:
 """
 
 # Load the dataset
-dataset = torch.load("natural_images_new.pt", weights_only=False)
+dataset = torch.load("natural_images.pt", weights_only=False)
 
 print("Dataset keys:", dataset.keys())
 print("Image IDs shape:", dataset["image_ids"].shape)
