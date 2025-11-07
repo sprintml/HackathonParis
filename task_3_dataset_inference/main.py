@@ -1,9 +1,9 @@
 import torch as th
 import pandas as pd
 import requests
-import time
 import sys
 import torchvision.models as models
+import os
 
 # --------------------------------
 # DATASET
@@ -81,53 +81,154 @@ submission_df.to_csv("example_submission.csv", index=None)
 # SUBMISSION PROCESS
 # --------------------------------
 
-BASE_URL = "http://34.122.51.94:9000"
-API_KEY  = "INSERT_YOUR_API_KEY_HERE" 
+"""
+Example submission script for the Vision Set Membership Inference Task.
 
-TASK_ID  = "06-dataset-inference-vision"
-FILE_PATH = "example_submission.csv" # <- Path to your real submission file
+Submission Requirements (read carefully to avoid automatic rejection):
 
-try:
-    with open(FILE_PATH, "rb") as f:
-        response = requests.post(
-            f"{BASE_URL}/submit/{TASK_ID}",
-            headers={"X-API-Key": API_KEY},
-            files={"file": f},
-            timeout=60,
-        )
+1. CSV FORMAT
+----------------
+- The file **must be a CSV** with extension `.csv`.
+- It must contain **exactly two columns**, named:
+      subset_id, membership
+  → Column names must match exactly (lowercase, no extra spaces).
+  → Column order does not matter, but both must be present.
 
-    response.raise_for_status()
-    submission_data = response.json()
-    submission_id = submission_data.get("submission_id")
+2. ROW COUNT AND IDENTIFIERS
+-------------------------------
+- Your file must contain **exactly 1,000 rows**.
+- Each row corresponds to one unique `subset_id` in the range **0–999** (inclusive).
+- Every subset_id must appear **exactly once**.
+- Do **not** add, remove, or rename any IDs.
+- Do **not** include duplicates or missing entries.
+- The evaluator checks:
+      subset_id.min() == 0
+      subset_id.max() == 999
+      subset_id.unique().size == 1000
 
-    print(f"✅ Successfully submitted. Submission ID: {submission_id}")
-    print("Initial response:", submission_data)
+3. MEMBERSHIP SCORES
+----------------------
+- The `membership` column must contain **numeric values** representing your model’s predicted confidence
+  that the corresponding subset is a **member** of the training set.
 
-except requests.exceptions.RequestException as e:
-    print(f"❌ An error occurred during submission: {e}")
-    if e.response is not None:
-        print("Response body:", e.response.text)
+  Examples of valid membership values:
+    - Probabilities: values in [0.0, 1.0]
+    - Raw model scores: any finite numeric values (will be ranked for AUC)
+
+- Do **not** submit string labels like "yes"/"no" or "member"/"non-member".
+- The evaluator converts your `membership` column to numeric using `pd.to_numeric()`.
+  → Any non-numeric, NaN, or infinite entries will cause automatic rejection.
+
+4. TECHNICAL LIMITS
+----------------------
+- Maximum file size: **20 MB**
+- Encoding: UTF-8 recommended.
+- Avoid extra columns, blank lines, or formulas.
+- Ensure all values are numeric and finite.
+- Supported data types: int, float (e.g., float32, float64)
+
+5. VALIDATION SUMMARY
+------------------------
+Your submission will fail if:
+- Columns don’t match exactly ("subset_id", "membership")
+- Row count differs from 1,000
+- Any subset_id is missing, duplicated, or outside [0, 999]
+- Any membership value is NaN, Inf, or non-numeric
+- File is too large or not a valid CSV
+
+Two key metrics are computed:
+  1. **ROC-AUC (Area Under the ROC Curve)** — measures overall discriminative ability.
+  2. **TPR@FPR=0.01** — true positive rate when the false positive rate is at 1%.
+
+"""
+
+BASE_URL  = "http://34.122.51.94:9000"
+API_KEY   = "Your-API-Key-Here"  # replace with your actual API key
+
+TASK_ID   = "06-dataset-inference-vision"
+FILE_PATH = "Your-Submission-File.csv"  # replace with your actual file path
+
+SUBMIT     = False
+GET_STATUS = True   # set True to poll with a known submission_id
+
+# paste a known ID here when GET_STATUS=True and SUBMIT=False
+KNOWN_SUBMISSION_ID = "Your-Known-Submission-ID"  # replace with your actual submission ID
+
+def die(msg):
+    print(f"{msg}", file=sys.stderr)
     sys.exit(1)
 
-while True:
+if SUBMIT:
+    if not os.path.isfile(FILE_PATH):
+        die(f"File not found: {FILE_PATH}")
+
     try:
-        time.sleep(10)
-        status_response = requests.get(
-            f"{BASE_URL}/submissions/{submission_id}",
-            headers={"X-API-Key": API_KEY},
-        )
-        status_response.raise_for_status()
-        status_data = status_response.json()
-        status = status_data.get("status")
+        with open(FILE_PATH, "rb") as f:
+            files = {
+                # (fieldname) -> (filename, fileobj, content_type)
+                "file": (os.path.basename(FILE_PATH), f, "csv"),
+            }
+            resp = requests.post(
+                f"{BASE_URL}/submit/{TASK_ID}",
+                headers={"X-API-Key": API_KEY},
+                files=files,
+                timeout=(10, 120),  # (connect timeout, read timeout)
+            )
+        # Helpful output even on non-2xx
+        try:
+            body = resp.json()
+        except Exception:
+            body = {"raw_text": resp.text}
 
-        print(f"Submission Status: {status}")
+        if resp.status_code == 413:
+            die("Upload rejected: file too large (HTTP 413). Reduce size and try again.")
 
-        if status in ["done", "failed"]:
-            print("Final submission data:", status_data)
-            break
+        resp.raise_for_status()
+
+        submission_id = body.get("submission_id")
+        print("Successfully submitted.")
+        print("Server response:", body)
+        if submission_id:
+            print(f"Submission ID: {submission_id}")
 
     except requests.exceptions.RequestException as e:
-        print(f"❌ An error occurred while checking submission status: {e}")
-        if e.response is not None:
-            print("Response body:", e.response.text)
+        detail = getattr(e, "response", None)
+        print(f"Submission error: {e}")
+        if detail is not None:
+            try:
+                print("Server response:", detail.json())
+            except Exception:
+                print("Server response (text):", detail.text)
+        sys.exit(1)
+
+if GET_STATUS:
+    submission_id = KNOWN_SUBMISSION_ID
+    if not submission_id:
+        die("Please set KNOWN_SUBMISSION_ID to check a submission’s status.")
+
+    try:
+        resp = requests.get(
+            f"{BASE_URL}/submissions/{submission_id}",
+            headers={"X-API-Key": API_KEY},
+            timeout=(10, 30),
+        )
+        try:
+            body = resp.json()
+        except Exception:
+            body = {"raw_text": resp.text}
+
+        resp.raise_for_status()
+
+        status = body.get("status")
+        print(f"Submission Status: {status}")
+        print("Full response:", body)
+
+    except requests.exceptions.RequestException as e:
+        detail = getattr(e, "response", None)
+        print(f"Status check error: {e}")
+        if detail is not None:
+            try:
+                print("Server response:", detail.json())
+            except Exception:
+                print("Server response (text):", detail.text)
         sys.exit(1)
