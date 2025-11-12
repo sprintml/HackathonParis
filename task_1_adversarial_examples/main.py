@@ -11,9 +11,9 @@ import numpy as np
 """
 Dataset contents:
 
--"image_ids": List containing the IDs of the 100 natural images, has shape (100)
+-"image_ids": Tensor containing the IDs of the 100 natural images, has shape (100)
 -"images": Tensor containing the 100 natural images, has shape (100, 3, 28, 28)
--"labels": List of true labels for the images, has shape (100)
+-"labels": Tensor of true labels for the images, has shape (100)
 """
 
 # Load the dataset
@@ -34,7 +34,7 @@ print("First image tensor:", dataset["images"][:1])
 """
 The submission must be a .npz file of the following format:
 
--"image_ids": List containing the IDs of the images corresponding to your adversarial examples, has shape (100)
+-"image_ids": Tensor containing the IDs of the images corresponding to your adversarial examples, has shape (100)
 -"images": Tensor containing the generated adversarial examples in the same order as the corresponding
            natural images, has shape (100, 3, 28, 28)
 """
