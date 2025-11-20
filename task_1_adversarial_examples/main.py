@@ -128,12 +128,13 @@ def die(msg):
     sys.exit(1)
 
 if GET_LOGITS:
-
     with open(QUERY_PATH, "rb") as f:
         files = {"npz": (QUERY_PATH, f, "application/octet-stream")}
         response = requests.post(
-            f"{BASE_URL}/{TASK_ID}/logits", 
-            files=files)
+            f"{BASE_URL}/{TASK_ID}/logits",
+            files=files,
+            headers={"X-API-Key": API_KEY},
+        )
 
     if response.status_code == 200:
         data = response.json()
