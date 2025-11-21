@@ -1,10 +1,10 @@
-﻿import csv
+import csv
 import random
 import zipfile
 import requests
 from pathlib import Path
-from collections import Counter
-
+import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms, models, datasets
@@ -14,15 +14,16 @@ from PIL import Image
 # ----------------------------
 # CONFIG
 # ----------------------------
-ZIP_FILE = "Dataset.zip"     # Path to dataset zip
-DATASET_DIR = Path("dataset")  # Unzipped folder
+ZIP_FILE = "Dataset.zip"        # Path to dataset zip file
+DATASET_DIR = Path("dataset")   # Folder after extraction
 SUBMISSION_FILE = "submission.csv"
-LABELS = ["RAR", "Taming", "VAR", "SD", "outlier"] # Donot change this
+LABELS = ["clean", "watermark"]
 
 # Leaderboard submission
 SERVER_URL = "http://34.122.51.94:80"
 API_KEY = None  # teams insert their assigned token here
-TASK_ID = "05-iar-attribution"
+TASK_ID = "08-watermark-detection"
+
 
 # ----------------------------
 # UNZIP DATASET
@@ -39,12 +40,11 @@ else:
 # TRANSFORMS
 # ----------------------------
 transform = transforms.Compose([
-    transforms.Resize((224, 224)),
     transforms.ToTensor(),
 ])
 
 
-# ----------------------------s
+# ----------------------------
 # DATASETS & DATALOADERS
 # ----------------------------
 print("Loading datasets...")
@@ -56,7 +56,7 @@ val_dataset   = datasets.ImageFolder(root=DATASET_DIR / "val", transform=transfo
 class TestDataset(Dataset):
     def __init__(self, root, transform=None):
         self.root = Path(root)
-        self.files = sorted(list(self.root.glob("*.*")))  # all files
+        self.files = sorted(list(self.root.glob("*.*")))  # all image files
         self.transform = transform
 
     def __len__(self):
@@ -75,16 +75,6 @@ train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_worker
 val_loader   = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
 test_loader  = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4)
 
-# Print classes and per-class counts for train/val
-def _print_class_stats(name: str, ds):
-    counts = Counter(getattr(ds, "targets", []))
-    print(f"{name} classes: {ds.classes}")
-    for cls, idx in ds.class_to_idx.items():
-        print(f"  {cls}: {counts.get(idx, 0)}")
-
-_print_class_stats("Train", train_dataset)
-_print_class_stats("Val", val_dataset)
-
 print(f"Train size: {len(train_dataset)} | Val size: {len(val_dataset)} | Test size: {len(test_dataset)}")
 
 
@@ -98,25 +88,25 @@ model = model.to(device)
 
 
 # ----------------------------
-# DUMMY INFERENCE ON TEST / DUMMY SUBMISSION
+# DUMMY INFERENCE / RANDOM SCORES
 # ----------------------------
-print("Generating random predictions for submission...")
+print("Generating random prediction scores for submission...")
 preds = []
 for batch in test_loader:
     for fname in batch["image_name"]:
-        label = random.choice(LABELS)  # random baseline
-        preds.append([fname, label])
+        score = round(random.random(), 4)  # random float in [0,1]
+        preds.append([fname, score])
 
 # ----------------------------
 # SAVE SUBMISSION
 # ----------------------------
 with open(SUBMISSION_FILE, "w", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
-    writer.writerow(["image_name", "label"])
+    writer.writerow(["image_name", "score"])  # not label
     writer.writerows(preds)
 
 print(f"Saved submission file to {SUBMISSION_FILE}")
-print("   Format: image_name,label | Allowed labels: RAR, Taming, VAR, SD, outlier")
+print("Format: image_name,score | Allowed scores: [0,1]")
 
 
 # ----------------------------
