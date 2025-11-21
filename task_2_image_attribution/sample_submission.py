@@ -65,10 +65,6 @@ TASK_ID   = "05-iar-attribution"
 FILE_PATH = "Your-Submission-File.csv"  # replace with your actual file path
 
 SUBMIT     = False
-GET_STATUS = True   # set True to poll with a known submission_id
-
-# paste a known ID here when GET_STATUS=True and SUBMIT=False
-KNOWN_SUBMISSION_ID = "Your-Known-Submission-ID"  # replace with your actual submission ID
 
 def die(msg):
     print(f"{msg}", file=sys.stderr)
@@ -110,38 +106,6 @@ if SUBMIT:
     except requests.exceptions.RequestException as e:
         detail = getattr(e, "response", None)
         print(f"Submission error: {e}")
-        if detail is not None:
-            try:
-                print("Server response:", detail.json())
-            except Exception:
-                print("Server response (text):", detail.text)
-        sys.exit(1)
-
-if GET_STATUS:
-    submission_id = KNOWN_SUBMISSION_ID
-    if not submission_id:
-        die("Please set KNOWN_SUBMISSION_ID to check a submission’s status.")
-
-    try:
-        resp = requests.get(
-            f"{BASE_URL}/submissions/{submission_id}",
-            headers={"X-API-Key": API_KEY},
-            timeout=(10, 30),
-        )
-        try:
-            body = resp.json()
-        except Exception:
-            body = {"raw_text": resp.text}
-
-        resp.raise_for_status()
-
-        status = body.get("status")
-        print(f"Submission Status: {status}")
-        print("Full response:", body)
-
-    except requests.exceptions.RequestException as e:
-        detail = getattr(e, "response", None)
-        print(f"Status check error: {e}")
         if detail is not None:
             try:
                 print("Server response:", detail.json())

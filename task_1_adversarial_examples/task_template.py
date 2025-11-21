@@ -119,9 +119,6 @@ FILE_PATH = "PATH/TO/YOUR/SUBMISSION.npz"
 
 GET_LOGITS = False      # set True to get logits from the API
 SUBMIT     = False      # set True to submit your solution
-GET_STATUS = False      # set True to poll with a known submission_id
-
-KNOWN_SUBMISSION_ID = "Your_Submission_ID_Here"  # paste a known ID here
 
 def die(msg):
     print(f"{msg}", file=sys.stderr)
@@ -186,37 +183,3 @@ if SUBMIT:
             except Exception:
                 print("Server response (text):", detail.text)
         sys.exit(1)
-
-if GET_STATUS:
-
-    submission_id = KNOWN_SUBMISSION_ID
-    if not submission_id:
-        die("Please set KNOWN_SUBMISSION_ID to check a submission’s status.")
-
-    try:
-        resp = requests.get(
-            f"{BASE_URL}/submissions/{submission_id}",
-            headers={"X-API-Key": API_KEY},
-            timeout=(10, 30),
-        )
-        try:
-            body = resp.json()
-        except Exception:
-            body = {"raw_text": resp.text}
-
-        resp.raise_for_status()
-
-        status = body.get("status")
-        print(f"Submission Status: {status}")
-        print("Full response:", body)
-
-    except requests.exceptions.RequestException as e:
-        detail = getattr(e, "response", None)
-        print(f"Status check error: {e}")
-        if detail is not None:
-            try:
-                print("Server response:", detail.json())
-            except Exception:
-                print("Server response (text):", detail.text)
-        sys.exit(1)
-
