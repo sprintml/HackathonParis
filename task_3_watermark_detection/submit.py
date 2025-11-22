@@ -13,7 +13,7 @@ df = pd.DataFrame({
 })
 df.to_csv("submission.csv", index=None)
 response = requests.post(
-    "http://34.122.51.94:9000",
+    "http://34.122.51.94:80",
     files={"file": open("submission.csv", "rb")},
     headers={"token": "TOKEN"}
 )
